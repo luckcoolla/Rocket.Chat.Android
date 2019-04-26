@@ -3,22 +3,27 @@ package chat.rocket.android.server.domain
 import chat.rocket.android.server.infraestructure.RocketChatClientFactory
 import chat.rocket.android.util.retryIO
 import chat.rocket.core.internal.rest.settings
-import kotlinx.coroutines.experimental.CommonPool
-import kotlinx.coroutines.experimental.launch
-import kotlinx.coroutines.experimental.withContext
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import timber.log.Timber
 import javax.inject.Inject
 
+/**
+ * This class reloads the current logged server settings whenever needed.
+ */
 class RefreshSettingsInteractor @Inject constructor(
     private val factory: RocketChatClientFactory,
     private val repository: SettingsRepository
 ) {
 
     private var settingsFilter = arrayOf(
+        UNIQUE_IDENTIFIER,
+
         LDAP_ENABLE,
         CAS_ENABLE,
         CAS_LOGIN_URL,
-
         ACCOUNT_REGISTRATION,
         ACCOUNT_LOGIN_FORM,
         ACCOUNT_PASSWORD_RESET,
@@ -33,6 +38,12 @@ class RefreshSettingsInteractor @Inject constructor(
         ACCOUNT_GITLAB_URL,
         ACCOUNT_WORDPRESS,
         ACCOUNT_WORDPRESS_URL,
+
+        JITSI_ENABLED,
+        JISTI_ENABLE_CHANNELS,
+        JITSI_SSL,
+        JITSI_DOMAIN,
+        JITSI_URL_ROOM_PREFIX,
 
         SITE_URL,
         SITE_NAME,
@@ -62,7 +73,7 @@ class RefreshSettingsInteractor @Inject constructor(
     )
 
     suspend fun refresh(server: String) {
-        withContext(CommonPool) {
+        withContext(Dispatchers.IO) {
             factory.create(server).let { client ->
                 val settings = retryIO(
                     description = "settings",
@@ -78,7 +89,7 @@ class RefreshSettingsInteractor @Inject constructor(
     }
 
     fun refreshAsync(server: String) {
-        launch(CommonPool) {
+        GlobalScope.launch(Dispatchers.IO) {
             try {
                 refresh(server)
             } catch (ex: Exception) {

@@ -21,7 +21,6 @@ package chat.rocket.android.emoji
 import android.content.Context
 import android.graphics.Point
 import android.graphics.Rect
-import android.os.Build
 import android.view.Gravity
 import android.view.LayoutInflater
 import android.view.View
@@ -57,9 +56,6 @@ abstract class OverKeyboardPopupWindow(
 
     init {
         setBackgroundDrawable(null)
-        if (BuildConfig.VERSION_CODE >= Build.VERSION_CODES.LOLLIPOP) {
-            elevation = 0f
-        }
         val view = onCreateView(LayoutInflater.from(context))
         onViewCreated(view)
         contentView = view
@@ -89,7 +85,7 @@ abstract class OverKeyboardPopupWindow(
     /**
      * Call this function to resize the emoji popup according to your soft keyboard size
      */
-    fun setSizeForSoftKeyboard() {
+    private fun setSizeForSoftKeyboard() {
         val viewTreeObserver = rootView.viewTreeObserver
         viewTreeObserver.addOnGlobalLayoutListener(this)
     }
@@ -126,7 +122,7 @@ abstract class OverKeyboardPopupWindow(
 
     private fun calculateScreenHeight(): Int {
         val wm = context.getSystemService(Context.WINDOW_SERVICE) as WindowManager
-        val display = wm.getDefaultDisplay()
+        val display = wm.defaultDisplay
         val size = Point()
         display.getSize(size)
         return size.y

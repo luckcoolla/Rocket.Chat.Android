@@ -11,17 +11,20 @@ import chat.rocket.android.R
 import kotlinx.android.synthetic.main.activity_web_view.*
 import kotlinx.android.synthetic.main.app_bar.*
 
-fun Context.webViewIntent(webPageUrl: String): Intent {
+fun Context.webViewIntent(webPageUrl: String, toolbarTitle: String? = null): Intent {
     return Intent(this, WebViewActivity::class.java).apply {
         putExtra(INTENT_WEB_PAGE_URL, webPageUrl)
+        putExtra(TOOLBAR_TITLE, toolbarTitle)
     }
 }
 
 private const val INTENT_WEB_PAGE_URL = "web_page_url"
+private const val TOOLBAR_TITLE = "toolbar_title"
 
 // Simple WebView to load URL.
 class WebViewActivity : AppCompatActivity() {
     private lateinit var webPageUrl: String
+    private var toolbarTitle: String? = ""
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -29,6 +32,7 @@ class WebViewActivity : AppCompatActivity() {
 
         webPageUrl = intent.getStringExtra(INTENT_WEB_PAGE_URL)
         requireNotNull(webPageUrl) { "no web_page_url provided in Intent extras" }
+        toolbarTitle = intent.getStringExtra(TOOLBAR_TITLE)
 
         setupToolbar()
     }
@@ -47,7 +51,7 @@ class WebViewActivity : AppCompatActivity() {
     }
 
     private fun setupToolbar() {
-        toolbar.title = getString(R.string.title_legal_terms)
+        toolbar.title = if(toolbarTitle != null) toolbarTitle else webPageUrl.replace("https://","")
         toolbar.setNavigationIcon(R.drawable.ic_close_white_24dp)
         toolbar.setNavigationOnClickListener {
             finishActivity()

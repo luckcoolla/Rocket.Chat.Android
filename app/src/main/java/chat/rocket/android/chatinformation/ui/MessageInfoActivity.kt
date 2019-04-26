@@ -6,7 +6,6 @@ import android.os.Bundle
 import androidx.appcompat.app.AppCompatActivity
 import androidx.fragment.app.Fragment
 import chat.rocket.android.R
-import chat.rocket.android.chatinformation.ui.MessageInfoFragment.Companion.TAG_MESSAGE_INFO_FRAGMENT
 import chat.rocket.android.util.extensions.addFragment
 import chat.rocket.android.util.extensions.textContent
 import dagger.android.AndroidInjection
@@ -25,7 +24,6 @@ fun Context.messageInformationIntent(messageId: String): Intent {
 private const val INTENT_MESSAGE_ID = "message_id"
 
 class MessageInfoActivity : AppCompatActivity(), HasSupportFragmentInjector {
-
     @Inject
     lateinit var fragmentDispatchingAndroidInjector: DispatchingAndroidInjector<Fragment>
 
@@ -46,7 +44,7 @@ class MessageInfoActivity : AppCompatActivity(), HasSupportFragmentInjector {
     }
 
     private fun setupToolbar() {
-        text_room_name.textContent = getString(R.string.message_information_title)
+        text_toolbar_title.textContent = getString(R.string.message_information_title)
         setSupportActionBar(toolbar)
         supportActionBar?.setDisplayShowTitleEnabled(false)
         toolbar.setNavigationIcon(R.drawable.ic_arrow_back_white_24dp)

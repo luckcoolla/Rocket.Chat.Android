@@ -3,20 +3,15 @@ package chat.rocket.android.chatroom.presentation
 import chat.rocket.android.chatroom.uimodel.BaseUiModel
 import chat.rocket.android.chatroom.uimodel.suggestion.ChatRoomSuggestionUiModel
 import chat.rocket.android.chatroom.uimodel.suggestion.CommandSuggestionUiModel
+import chat.rocket.android.chatroom.uimodel.suggestion.EmojiSuggestionUiModel
 import chat.rocket.android.chatroom.uimodel.suggestion.PeopleSuggestionUiModel
+import chat.rocket.android.chatrooms.adapter.model.RoomUiModel
 import chat.rocket.android.core.behaviours.LoadingView
 import chat.rocket.android.core.behaviours.MessageView
 import chat.rocket.core.internal.realtime.socket.model.State
 import chat.rocket.core.model.ChatRoom
 
 interface ChatRoomView : LoadingView, MessageView {
-
-    /**
-     * Shows the Favorite/Unfavorite chat room icon.
-     *
-     * @param isFavorite Shows the favorite icon if true, otherwise shows the unfavorite icon.
-     */
-    fun showFavoriteIcon(isFavorite: Boolean)
 
     /**
      * Shows the chat room messages.
@@ -127,12 +122,10 @@ interface ChatRoomView : LoadingView, MessageView {
     fun populatePeopleSuggestions(members: List<PeopleSuggestionUiModel>)
 
     fun populateRoomSuggestions(chatRooms: List<ChatRoomSuggestionUiModel>)
-    /**
-     * This user has joined the chat callback.
-     *
-     * @param userCanPost Whether the user can post a message or not.
-     */
-    fun onJoined(userCanPost: Boolean)
+
+    fun populateEmojiSuggestions(emojis: List<EmojiSuggestionUiModel>)
+
+    fun onJoined(roomUiModel: RoomUiModel)
 
     fun showReactionsPopup(messageId: String)
 
@@ -143,14 +136,6 @@ interface ChatRoomView : LoadingView, MessageView {
      */
     fun populateCommandSuggestions(commands: List<CommandSuggestionUiModel>)
 
-    /**
-     * Communicate whether it's a broadcast channel and if current user can post to it.
-     */
-    fun onRoomUpdated(userCanPost: Boolean, channelIsBroadcast: Boolean, userCanMod: Boolean)
+    fun onRoomUpdated(roomUiModel: RoomUiModel)
 
-    /**
-     * Open a DM with the user in the given [chatRoom] and pass the [permalink] for the message
-     * to reply.
-     */
-    fun openDirectMessage(chatRoom: ChatRoom, permalink: String)
 }

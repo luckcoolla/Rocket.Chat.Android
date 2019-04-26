@@ -18,7 +18,9 @@ import chat.rocket.android.util.extensions.toList
 import chat.rocket.core.model.Message
 import chat.rocket.core.model.isSystemMessage
 import com.google.android.flexbox.FlexDirection
+import com.google.android.flexbox.FlexWrap
 import com.google.android.flexbox.FlexboxLayoutManager
+import com.google.android.flexbox.JustifyContent
 
 abstract class BaseViewHolder<T : BaseUiModel<*>>(
     itemView: View,
@@ -41,13 +43,12 @@ abstract class BaseViewHolder<T : BaseUiModel<*>>(
     private fun bindReactions() {
         data?.let {
             val recyclerView = itemView.findViewById(R.id.recycler_view_reactions) as RecyclerView
-            val adapter: MessageReactionsAdapter
-            if (recyclerView.adapter == null) {
-                adapter = MessageReactionsAdapter()
+            val adapter: MessageReactionsAdapter = if (recyclerView.adapter == null) {
+                MessageReactionsAdapter()
             } else {
-                adapter = recyclerView.adapter as MessageReactionsAdapter
-                adapter.clear()
+                recyclerView.adapter as MessageReactionsAdapter
             }
+            adapter.clear()
 
             if (it.nextDownStreamMessage == null) {
                 adapter.listener = object : EmojiReactionListener {
@@ -60,12 +61,21 @@ abstract class BaseViewHolder<T : BaseUiModel<*>>(
                             reactionListener?.onReactionAdded(messageId, emoji)
                         }
                     }
+
+                    override fun onReactionLongClicked(shortname: String, isCustom: Boolean, url: String?, usernames: List<String>) {
+                        reactionListener?.onReactionLongClicked(shortname, isCustom,url, usernames)
+                    }
                 }
+
                 val context = itemView.context
                 val manager = FlexboxLayoutManager(context, FlexDirection.ROW)
+                manager.justifyContent = JustifyContent.FLEX_START
                 recyclerView.layoutManager = manager
                 recyclerView.adapter = adapter
-                adapter.addReactions(it.reactions.filterNot { it.unicode.startsWith(":") })
+
+                if (it.reactions.isNotEmpty()) {
+                    itemView.post { adapter.addReactions(it.reactions) }
+                }
             }
         }
     }
@@ -82,14 +92,14 @@ abstract class BaseViewHolder<T : BaseUiModel<*>>(
             data?.let { vm ->
                 vm.message.let {
                     val menuItems = view.context.inflate(R.menu.message_actions).toList()
-                    menuItems.find { it.itemId == R.id.action_message_unpin }?.apply {
-                        setTitle(if (it.pinned) R.string.action_msg_unpin else R.string.action_msg_pin)
+                    menuItems.find { it.itemId == R.id.action_pin }?.apply {
+                        setTitle(if (it.pinned) R.string.action_unpin else R.string.action_pin)
                         isChecked = it.pinned
                     }
 
-                    menuItems.find { it.itemId == R.id.action_message_star }?.apply {
+                    menuItems.find { it.itemId == R.id.action_star }?.apply {
                         val isStarred = it.starred?.isNotEmpty() ?: false
-                        setTitle(if (isStarred) R.string.action_msg_unstar else R.string.action_msg_star)
+                        setTitle(if (isStarred) R.string.action_unstar else R.string.action_star)
                         isChecked = isStarred
                     }
                     view.context?.let {

@@ -14,6 +14,9 @@ import chat.rocket.android.emoji.internal.EmojiCategory
 import chat.rocket.android.emoji.internal.EmojiPagerAdapter
 import chat.rocket.android.emoji.internal.PREF_EMOJI_SKIN_TONE
 import kotlinx.android.synthetic.main.emoji_picker.*
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.launch
 
 
 class EmojiPickerPopup(context: Context) : Dialog(context) {
@@ -27,19 +30,23 @@ class EmojiPickerPopup(context: Context) : Dialog(context) {
         setContentView(R.layout.emoji_picker)
 
         tabs.setupWithViewPager(pager_categories)
-        setupViewPager()
-        setSize()
+        GlobalScope.launch(Dispatchers.Main) {
+            setupViewPager()
+            setSize()
+        }
     }
 
     private fun setSize() {
         val lp = WindowManager.LayoutParams()
-        lp.copyFrom(window.attributes)
-        val dialogWidth = lp.width
-        val dialogHeight = context.resources.getDimensionPixelSize(R.dimen.picker_popup_height)
-        window.setLayout(dialogWidth, dialogHeight)
+        window?.let {
+            lp.copyFrom(it.attributes)
+            val dialogWidth = lp.width
+            val dialogHeight = context.resources.getDimensionPixelSize(R.dimen.picker_popup_height)
+            it.setLayout(dialogWidth, dialogHeight)
+        }
     }
 
-    private fun setupViewPager() {
+    private suspend fun setupViewPager() {
         adapter = EmojiPagerAdapter(object : EmojiKeyboardListener {
             override fun onEmojiAdded(emoji: Emoji) {
                 EmojiRepository.addToRecents(emoji)

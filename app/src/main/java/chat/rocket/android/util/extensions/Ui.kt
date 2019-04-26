@@ -3,6 +3,7 @@ package chat.rocket.android.util.extensions
 import android.annotation.SuppressLint
 import android.app.Activity
 import android.content.Context
+import android.os.Build
 import android.view.LayoutInflater
 import android.view.Menu
 import android.view.MenuItem
@@ -10,36 +11,47 @@ import android.view.View
 import android.view.ViewGroup
 import android.view.inputmethod.InputMethodManager
 import android.widget.Toast
+import androidx.annotation.ColorInt
 import androidx.annotation.LayoutRes
 import androidx.annotation.MenuRes
 import androidx.annotation.StringRes
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.view.SupportMenuInflater
 import androidx.appcompat.view.menu.MenuBuilder
+import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
+import androidx.fragment.app.FragmentActivity
 import chat.rocket.android.R
 
-// TODO: Remove. Use KTX instead.
-fun View.setVisible(visible: Boolean) {
-    visibility = if (visible) {
-        View.VISIBLE
-    } else {
-        View.GONE
+fun FragmentActivity.setLightStatusBar(view: View, @ColorInt color: Int = 0) {
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+        var flags = view.systemUiVisibility
+        flags = flags or View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR
+        view.systemUiVisibility = flags
+        window.statusBarColor = if (color == 0) {
+            ContextCompat.getColor(this, R.color.colorWhite)
+        } else {
+            color
+        }
     }
 }
 
-fun View.isVisible(): Boolean {
-    return visibility == View.VISIBLE
+fun FragmentActivity.clearLightStatusBar() {
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+        window.statusBarColor = ContextCompat.getColor(this, R.color.colorPrimary)
+    }
 }
 
 fun ViewGroup.inflate(@LayoutRes resource: Int, attachToRoot: Boolean = false): View =
     LayoutInflater.from(context).inflate(resource, this, attachToRoot)
 
-fun AppCompatActivity.addFragment(tag: String, layoutId: Int, allowStateLoss: Boolean = false,
-                                  newInstance: () -> Fragment) {
+fun AppCompatActivity.addFragment(
+    tag: String, layoutId: Int, allowStateLoss: Boolean = false,
+    newInstance: () -> Fragment
+) {
     val fragment = supportFragmentManager.findFragmentByTag(tag) ?: newInstance()
     val transaction = supportFragmentManager.beginTransaction()
-            .replace(layoutId, fragment, tag)
+        .replace(layoutId, fragment, tag)
     if (allowStateLoss) {
         transaction.commitAllowingStateLoss()
     } else {
@@ -68,12 +80,10 @@ fun AppCompatActivity.toPreviousView() {
 }
 
 fun Activity.hideKeyboard() {
-    if (currentFocus != null) {
-        val imm = getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
-        imm.hideSoftInputFromWindow(
-            currentFocus.windowToken,
-            InputMethodManager.RESULT_UNCHANGED_SHOWN
-        )
+    currentFocus?.run {
+        (getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager).also {
+            it.hideSoftInputFromWindow(windowToken, InputMethodManager.RESULT_UNCHANGED_SHOWN)
+        }
     }
 }
 

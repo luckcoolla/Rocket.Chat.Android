@@ -1,14 +1,21 @@
 package chat.rocket.android.authentication.registerusername.presentation
 
+import chat.rocket.android.analytics.AnalyticsManager
+import chat.rocket.android.analytics.event.AuthenticationEvent
 import chat.rocket.android.authentication.presentation.AuthenticationNavigator
 import chat.rocket.android.core.lifecycle.CancelStrategy
-import chat.rocket.android.infrastructure.LocalRepository
-import chat.rocket.android.server.domain.*
+import chat.rocket.android.server.domain.GetConnectingServerInteractor
+import chat.rocket.android.server.domain.GetSettingsInteractor
+import chat.rocket.android.server.domain.PublicSettings
+import chat.rocket.android.server.domain.SaveAccountInteractor
+import chat.rocket.android.server.domain.SaveCurrentServerInteractor
+import chat.rocket.android.server.domain.TokenRepository
+import chat.rocket.android.server.domain.favicon
 import chat.rocket.android.server.domain.model.Account
+import chat.rocket.android.server.domain.wideTile
 import chat.rocket.android.server.infraestructure.RocketChatClientFactory
-import chat.rocket.android.util.extensions.avatarUrl
 import chat.rocket.android.util.extension.launchUI
-import chat.rocket.android.util.extensions.registerPushToken
+import chat.rocket.android.util.extensions.avatarUrl
 import chat.rocket.android.util.extensions.serverLogoUrl
 import chat.rocket.android.util.retryIO
 import chat.rocket.common.RocketChatException
@@ -23,55 +30,46 @@ class RegisterUsernamePresenter @Inject constructor(
     private val strategy: CancelStrategy,
     private val navigator: AuthenticationNavigator,
     private val tokenRepository: TokenRepository,
-    private val localRepository: LocalRepository,
-    private val factory: RocketChatClientFactory,
     private val saveAccountInteractor: SaveAccountInteractor,
-    private val getAccountsInteractor: GetAccountsInteractor,
-    serverInteractor: GetConnectingServerInteractor,
+    private val analyticsManager: AnalyticsManager,
     private val saveCurrentServer: SaveCurrentServerInteractor,
-    settingsInteractor: GetSettingsInteractor
+    val serverInteractor: GetConnectingServerInteractor,
+    val factory: RocketChatClientFactory,
+    val settingsInteractor: GetSettingsInteractor
 ) {
     private val currentServer = serverInteractor.get()!!
     private val client: RocketChatClient = factory.create(currentServer)
     private var settings: PublicSettings = settingsInteractor.get(serverInteractor.get()!!)
 
     fun registerUsername(username: String, userId: String, authToken: String) {
-        if (username.isBlank()) {
-            view.alertBlankUsername()
-        } else {
-            launchUI(strategy) {
-                view.showLoading()
-                try {
-                    val me = retryIO("updateOwnBasicInformation(username = $username)") {
-                        client.updateOwnBasicInformation(username = username)
-                    }
-                    val registeredUsername = me.username
-                    if (registeredUsername != null) {
-                        saveAccount(registeredUsername)
-                        saveCurrentServer.save(currentServer)
-                        tokenRepository.save(currentServer, Token(userId, authToken))
-                        registerPushToken()
-                        navigator.toChatList()
-                    }
-                } catch (exception: RocketChatException) {
-                    exception.message?.let {
-                        view.showMessage(it)
-                    }.ifNull {
-                        view.showGenericErrorMessage()
-                    }
-                } finally {
-                    view.hideLoading()
+        launchUI(strategy) {
+            view.showLoading()
+            try {
+                val me = retryIO("updateOwnBasicInformation(username = $username)") {
+                    client.updateOwnBasicInformation(username = username)
                 }
+                val registeredUsername = me.username
+                if (registeredUsername != null) {
+                    saveAccount(registeredUsername)
+                    saveCurrentServer.save(currentServer)
+                    tokenRepository.save(currentServer, Token(userId, authToken))
+                    analyticsManager.logSignUp(
+                        AuthenticationEvent.AuthenticationWithOauth,
+                        true
+                    )
+                    navigator.toChatList()
+                }
+            } catch (exception: RocketChatException) {
+                analyticsManager.logSignUp(AuthenticationEvent.AuthenticationWithOauth, false)
+                exception.message?.let {
+                    view.showMessage(it)
+                }.ifNull {
+                    view.showGenericErrorMessage()
+                }
+            } finally {
+                view.hideLoading()
             }
         }
-    }
-
-    private suspend fun registerPushToken() {
-        localRepository.get(LocalRepository.KEY_PUSH_TOKEN)?.let {
-            client.registerPushToken(it, getAccountsInteractor.get(), factory)
-        }
-        // TODO: When the push token is null, at some point we should receive it with
-        // onTokenRefresh() on FirebaseTokenService, we need to confirm it.
     }
 
     private suspend fun saveAccount(username: String) {

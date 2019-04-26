@@ -4,19 +4,20 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
 import androidx.recyclerview.widget.DefaultItemAnimator
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import chat.rocket.android.R
+import chat.rocket.android.analytics.AnalyticsManager
+import chat.rocket.android.analytics.event.ScreenViewEvent
 import chat.rocket.android.chatinformation.adapter.ReadReceiptAdapter
 import chat.rocket.android.chatinformation.presentation.MessageInfoPresenter
 import chat.rocket.android.chatinformation.presentation.MessageInfoView
 import chat.rocket.android.chatinformation.viewmodel.ReadReceiptViewModel
-import chat.rocket.android.helper.EndlessRecyclerViewScrollListener
-import chat.rocket.android.util.extensions.setVisible
 import chat.rocket.android.util.extensions.showToast
-import chat.rocket.core.model.ReadReceipt
+import chat.rocket.android.util.extensions.ui
 import dagger.android.support.AndroidSupportInjection
 import kotlinx.android.synthetic.main.fragment_message_info.*
 import javax.inject.Inject
@@ -29,13 +30,14 @@ fun newInstance(messageId: String): Fragment {
     }
 }
 
+internal const val TAG_MESSAGE_INFO_FRAGMENT = "MessageInfoFragment"
 private const val BUNDLE_MESSAGE_ID = "message_id"
 
 class MessageInfoFragment : Fragment(), MessageInfoView {
-
     @Inject
     lateinit var presenter: MessageInfoPresenter
-
+    @Inject
+    lateinit var analyticsManager: AnalyticsManager
     private lateinit var adapter: ReadReceiptAdapter
     private lateinit var messageId: String
 
@@ -64,6 +66,8 @@ class MessageInfoFragment : Fragment(), MessageInfoView {
         super.onViewCreated(view, savedInstanceState)
         setupRecyclerView()
         presenter.loadReadReceipts(messageId = messageId)
+
+        analyticsManager.logScreenView(ScreenViewEvent.MessageInfo)
     }
 
     private fun setupRecyclerView() {
@@ -81,20 +85,22 @@ class MessageInfoFragment : Fragment(), MessageInfoView {
     }
 
     override fun showLoading() {
-        view_loading.setVisible(true)
-        view_loading.show()
+        ui {
+            view_loading.isVisible = true
+            view_loading.show()
+        }
     }
 
     override fun hideLoading() {
-        view_loading.hide()
-        view_loading.setVisible(false)
+        ui {
+            view_loading.isVisible = false
+            view_loading.hide()
+        }
     }
 
     override fun showReadReceipts(messageReceipts: List<ReadReceiptViewModel>) {
-        adapter.addAll(messageReceipts)
-    }
-
-    companion object {
-        const val TAG_MESSAGE_INFO_FRAGMENT = "MessageInfoFragment"
+        ui {
+            adapter.addAll(messageReceipts)
+        }
     }
 }

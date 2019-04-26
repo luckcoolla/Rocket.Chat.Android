@@ -51,6 +51,8 @@ fun String.termsOfServiceUrl() = "${removeTrailingSlash()}/terms-of-service"
 
 fun String.privacyPolicyUrl() = "${removeTrailingSlash()}/privacy-policy"
 
+fun String.adminPanelUrl() = "${removeTrailingSlash()}/admin/info?layout=embedded"
+
 fun String.isValidUrl(): Boolean = Patterns.WEB_URL.matcher(this).matches()
 
 fun String.parseColor(): Int {
@@ -67,9 +69,14 @@ fun String.userId(userId: String?): String? {
     return userId?.let { this.replace(it, "") }
 }
 
-fun String.lowercaseUrl(): String? {
-    val httpUrl = HttpUrl.parse(this)
-    val newScheme = httpUrl?.scheme()?.toLowerCase()
+fun String.lowercaseUrl(): String? = HttpUrl.parse(this)?.run {
+    newBuilder().scheme(scheme().toLowerCase()).build().toString()
+}
 
-    return httpUrl?.newBuilder()?.scheme(newScheme)?.build()?.toString()
+fun String?.isNotNullNorEmpty(): Boolean = this != null && this.isNotEmpty()
+
+inline fun String?.ifNotNullNotEmpty(block: (String) -> Unit) {
+    if (this != null && this.isNotEmpty()) {
+        block(this)
+    }
 }

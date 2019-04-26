@@ -15,6 +15,8 @@ import androidx.recyclerview.widget.DividerItemDecoration
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import chat.rocket.android.R
+import chat.rocket.android.analytics.AnalyticsManager
+import chat.rocket.android.analytics.event.ScreenViewEvent
 import chat.rocket.android.createchannel.presentation.CreateChannelPresenter
 import chat.rocket.android.createchannel.presentation.CreateChannelView
 import chat.rocket.android.main.ui.MainActivity
@@ -34,14 +36,16 @@ import kotlinx.android.synthetic.main.fragment_create_channel.*
 import java.util.concurrent.TimeUnit
 import javax.inject.Inject
 
+internal const val TAG_CREATE_CHANNEL_FRAGMENT = "CreateChannelFragment"
+
 class CreateChannelFragment : Fragment(), CreateChannelView, ActionMode.Callback {
     @Inject
     lateinit var createChannelPresenter: CreateChannelPresenter
+    @Inject
+    lateinit var analyticsManager: AnalyticsManager
     private var actionMode: ActionMode? = null
     private val adapter: MembersAdapter = MembersAdapter {
-        if (it.username != null) {
-            processSelectedMember(it.username)
-        }
+        it.username?.run { processSelectedMember(this) }
     }
     private val compositeDisposable = CompositeDisposable()
     private var channelType: String = RoomType.CHANNEL
@@ -69,6 +73,8 @@ class CreateChannelFragment : Fragment(), CreateChannelView, ActionMode.Callback
         setupViewListeners()
         setupRecyclerView()
         subscribeEditTexts()
+
+        analyticsManager.logScreenView(ScreenViewEvent.CreateChannel)
     }
 
     override fun onDestroyView() {
@@ -161,7 +167,7 @@ class CreateChannelFragment : Fragment(), CreateChannelView, ActionMode.Callback
 
     override fun prepareToShowChatList() {
         with(activity as MainActivity) {
-            setCheckedNavDrawerItem(R.id.action_chat_rooms)
+            setCheckedNavDrawerItem(R.id.menu_action_chats)
             openDrawer()
             getDrawerLayout().postDelayed(1000) {
                 closeDrawer()
@@ -218,8 +224,10 @@ class CreateChannelFragment : Fragment(), CreateChannelView, ActionMode.Callback
     private fun setupRecyclerView() {
         ui {
             recycler_view.layoutManager =
-                LinearLayoutManager(context, RecyclerView.VERTICAL, false)
-            recycler_view.addItemDecoration(DividerItemDecoration(it, DividerItemDecoration.HORIZONTAL))
+                    LinearLayoutManager(context, RecyclerView.VERTICAL, false)
+            recycler_view.addItemDecoration(
+                DividerItemDecoration(it, DividerItemDecoration.HORIZONTAL)
+            )
             recycler_view.adapter = adapter
         }
     }
@@ -284,8 +292,8 @@ class CreateChannelFragment : Fragment(), CreateChannelView, ActionMode.Callback
 
     private fun addChip(chipText: String) {
         val chip = Chip(context)
-        chip.chipText = chipText
-        chip.isCloseIconEnabled = true
+        chip.text = chipText
+        chip.isCloseIconVisible = true
         chip.setChipBackgroundColorResource(R.color.icon_grey)
         setupChipOnCloseIconClickListener(chip)
         chip_group_member.addView(chip)
@@ -294,7 +302,7 @@ class CreateChannelFragment : Fragment(), CreateChannelView, ActionMode.Callback
     private fun setupChipOnCloseIconClickListener(chip: Chip) {
         chip.setOnCloseIconClickListener {
             removeChip(it)
-            removeMember((it as Chip).chipText.toString())
+            removeMember((it as Chip).text.toString())
             // whenever we remove a chip we should process the chip group visibility.
             processChipGroupVisibility()
         }

@@ -2,29 +2,19 @@ package chat.rocket.android.authentication.signup.presentation
 
 import chat.rocket.android.core.behaviours.LoadingView
 import chat.rocket.android.core.behaviours.MessageView
-import com.google.android.gms.auth.api.credentials.Credential
 
 interface SignupView : LoadingView, MessageView {
 
     /**
-     * Alerts the user about a blank name.
+     * Enables the button to register when the user enters all the required fields.
      */
-    fun alertBlankName()
+    fun enableButtonRegister()
 
     /**
-     * Alerts the user about a blank username.
+     * Disables the button to register when the user doesn't enter all the required fields.
      */
-    fun alertBlankUsername()
+    fun disableButtonRegister()
 
-    /**
-     * Alerts the user about a empty password.
-     */
-    fun alertEmptyPassword()
-
-    /**
-     * Alerts the user about a blank email.
-     */
-    fun alertBlankEmail()
 
     /**
      * Saves Google Smart Lock credentials.

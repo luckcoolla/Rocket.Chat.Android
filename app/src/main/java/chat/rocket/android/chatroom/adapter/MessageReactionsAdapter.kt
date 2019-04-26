@@ -4,7 +4,7 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.ImageView
-import android.widget.TextView
+import androidx.core.content.ContextCompat
 import androidx.recyclerview.widget.RecyclerView
 import chat.rocket.android.R
 import chat.rocket.android.chatroom.uimodel.ReactionUiModel
@@ -14,14 +14,12 @@ import chat.rocket.android.emoji.EmojiKeyboardListener
 import chat.rocket.android.emoji.EmojiPickerPopup
 import chat.rocket.android.emoji.EmojiReactionListener
 import chat.rocket.android.infrastructure.LocalRepository
+import com.bumptech.glide.Glide
+import kotlinx.android.synthetic.main.item_reaction.view.*
 import java.util.concurrent.CopyOnWriteArrayList
 import javax.inject.Inject
 
 class MessageReactionsAdapter : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
-    companion object {
-        private const val REACTION_VIEW_TYPE = 0
-        private const val ADD_REACTION_VIEW_TYPE = 1
-    }
 
     private val reactions = CopyOnWriteArrayList<ReactionUiModel>()
     var listener: EmojiReactionListener? = null
@@ -36,17 +34,17 @@ class MessageReactionsAdapter : RecyclerView.Adapter<RecyclerView.ViewHolder>() 
             }
             else -> {
                 view = inflater.inflate(R.layout.item_reaction, parent, false)
-                SingleReactionViewHolder(view, listener)
+                ReactionViewHolder(view, listener)
             }
         }
     }
 
     override fun onBindViewHolder(holder: RecyclerView.ViewHolder, position: Int) {
-        if (holder is SingleReactionViewHolder) {
+        if (holder is ReactionViewHolder) {
             holder.bind(reactions[position])
         } else {
             holder as AddReactionViewHolder
-            holder.bind(reactions[0].messageId)
+            holder.bind(reactions.first().messageId)
         }
     }
 
@@ -74,9 +72,11 @@ class MessageReactionsAdapter : RecyclerView.Adapter<RecyclerView.ViewHolder>() 
     fun contains(reactionShortname: String) =
         reactions.firstOrNull { it.shortname == reactionShortname } != null
 
-    class SingleReactionViewHolder(view: View,
-                                   private val listener: EmojiReactionListener?)
-        : RecyclerView.ViewHolder(view), View.OnClickListener {
+    class ReactionViewHolder(
+        view: View,
+        private val listener: EmojiReactionListener?
+    ) : RecyclerView.ViewHolder(view), View.OnClickListener, View.OnLongClickListener {
+
         @Inject
         lateinit var localRepository: LocalRepository
         @Volatile
@@ -95,23 +95,38 @@ class MessageReactionsAdapter : RecyclerView.Adapter<RecyclerView.ViewHolder>() 
             clickHandled = false
             this.reaction = reaction
             with(itemView) {
-                val emojiTextView = findViewById<TextView>(R.id.text_emoji)
-                val countTextView = findViewById<TextView>(R.id.text_count)
-                emojiTextView.text = reaction.unicode
-                countTextView.text = reaction.count.toString()
+                if (reaction.url.isNullOrEmpty()) {
+                    // The view at index 0 corresponds to the one to display unicode text emoji.
+                    view_flipper_reaction.displayedChild = 0
+                    text_emoji.text = reaction.unicode
+                } else {
+                    // The view at index 1 corresponds to the one to display custom emojis which are images.
+                    view_flipper_reaction.displayedChild = 1
+                    val glideRequest = if (reaction.url!!.endsWith("gif", true)) {
+                        Glide.with(context).asGif()
+                    } else {
+                        Glide.with(context).asBitmap()
+                    }
+
+                    glideRequest.load(reaction.url).into(image_emoji)
+                }
+
                 val myself = localRepository.get(LocalRepository.CURRENT_USERNAME_KEY)
                 if (reaction.usernames.contains(myself)) {
                     val context = itemView.context
-                    val resources = context.resources
-                    countTextView.setTextColor(resources.getColor(R.color.colorAccent))
+                    text_count.setTextColor(ContextCompat.getColor(context, R.color.colorAccent))
                 }
 
-                emojiTextView.setOnClickListener(this@SingleReactionViewHolder)
-                countTextView.setOnClickListener(this@SingleReactionViewHolder)
+                text_count.text = reaction.count.toString()
+
+                view_flipper_reaction.setOnClickListener(this@ReactionViewHolder)
+                text_count.setOnClickListener(this@ReactionViewHolder)
+                view_flipper_reaction.setOnLongClickListener(this@ReactionViewHolder)
+                text_count.setOnLongClickListener(this@ReactionViewHolder)
             }
         }
 
-        override fun onClick(v: View?) {
+        override fun onClick(v: View) {
             synchronized(this) {
                 if (!clickHandled) {
                     clickHandled = true
@@ -119,10 +134,18 @@ class MessageReactionsAdapter : RecyclerView.Adapter<RecyclerView.ViewHolder>() 
                 }
             }
         }
+
+        override fun onLongClick(v: View?): Boolean {
+            listener?.onReactionLongClicked(reaction.shortname, reaction.isCustom, reaction.url, reaction.usernames)
+            return true
+        }
     }
 
-    class AddReactionViewHolder(view: View,
-                                private val listener: EmojiReactionListener?) : RecyclerView.ViewHolder(view) {
+    class AddReactionViewHolder(
+        view: View,
+        private val listener: EmojiReactionListener?
+    ) : RecyclerView.ViewHolder(view) {
+
         fun bind(messageId: String) {
             itemView as ImageView
             itemView.setOnClickListener {
@@ -135,5 +158,10 @@ class MessageReactionsAdapter : RecyclerView.Adapter<RecyclerView.ViewHolder>() 
                 emojiPickerPopup.show()
             }
         }
+    }
+
+    companion object {
+        private const val REACTION_VIEW_TYPE = 0
+        private const val ADD_REACTION_VIEW_TYPE = 1
     }
 }
